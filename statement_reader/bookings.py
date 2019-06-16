@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Dict
+
 from .booking import Booking
 
 
@@ -38,3 +40,22 @@ class Bookings(list):
             self.daterelation[booking_date] = list()
         self.daterelation[booking_date].append(booking)
         super().append(booking)
+
+
+    def _sum_by_attrib(self, attrib: str) -> Dict[str, float]:
+        result = {}
+        for i in self:
+            i: Booking
+            if not hasattr(i, attrib):
+                raise ValueError(f"Tried to sum by attrib {attrib} but {type(i)} does not have this attribute!")
+            key = getattr(i, attrib)
+            if key not in result:
+                result[key] = 0
+            result[key] = result[key] + i.amount
+        return result
+
+    def sum_by_payee(self) -> Dict[str, float]:
+        return self._sum_by_attrib("payee")
+
+    def sum_by_category(self)-> Dict[str, float]:
+        return self._sum_by_attrib("category")
