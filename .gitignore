@@ -4,3 +4,4 @@ statement_reader/booking/personal.py
 __pycache__/*
 statement_reader/booking/__pycache__/*
 *.pyc
+testing.py
