@@ -117,7 +117,7 @@ def pdf2bookings(filepath):
         subprocess.run(['pdftotext', '-layout', filepath, tmpfile.name])
         # extract the year
         result = subprocess.run(
-            f"cat {tmpfile.name} |  sed -n -e '/erstellt am [23][0-9][.][01][1-9].20[0-9][0-9]/ {{p;q}}' | sed 's/^.*am [23][0-9][.][01][1-9].\\(20[0-9][0-9]\\)/\\1/'",
+            f"cat {tmpfile.name} |  sed -n -e '/erstellt am [23][0-9][.][01][0-9].20[0-9][0-9]/ {{p;q}}' | sed 's/^.*am [23][0-9][.][01][0-9].\\(20[0-9][0-9]\\)/\\1/'",
             shell=True, stdout=subprocess.PIPE, encoding="UTF-8")
         year = result.stdout.replace("\n", "").strip()
         # Now just extract the actual lines containing a transfer by looking at every block that starts with the date
