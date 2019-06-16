@@ -11,12 +11,15 @@ class Bookings(list):
         super().__init__()
         self.daterelation = dict()
 
-    def _repr_html_(self):
+    def html_filter_entry_without_category(self, filter: bool = True):
         result = "<table class='table_basic'><tr><th>Date</th><th>Category</th><th>Type</th><th>Amount</th><th>Payee</th><th>Comment</th></tr>"
         for i in self:
-            if not i.category:
+            if not i.category or not filter:
                 result = f"{result}\n<tr>{i._tr_}</tr>"
         return f"{result}</table>"
+
+    def _repr_html_(self):
+        return self.html_filter_entry_without_category(False)
 
     def __add__(self, other: 'Bookings'):
         result = Bookings()
@@ -90,7 +93,7 @@ def data2booking(data, year):
         # Check for new entry
         if line[0] != " ":
             if booking:
-                # Set payee just in the end, as we need the comment to be read completly before
+                # Set payee just in the end, as we need the comment to be read complete before
                 # print(f"Comment: {booking.comment}")
                 booking.payee = payee
                 bookings.append(booking)
