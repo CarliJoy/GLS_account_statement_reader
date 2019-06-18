@@ -29,7 +29,16 @@ class BookingBase:
         self.date: str = None
         self.amount: float = None
         self._wrong_type = None
-        self.comment = ""
+        self._comment: str = ""
+
+    @property
+    def comment(self) -> str:
+        return self._comment
+
+    @comment.setter
+    def comment(self, value: str):
+        # ignore duplicate spaces
+        self._comment =re.sub("[ ]+"," ", value)
 
     @property
     def type(self) -> str:
