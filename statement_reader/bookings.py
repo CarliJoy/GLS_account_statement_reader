@@ -1,13 +1,13 @@
 from datetime import datetime
 from typing import Dict
-
+import logging
 from .booking import Booking
 
 
 class Bookings(list):
     def __init__(self):
         super().__init__()
-        self.daterelation = dict()
+        self.daterelation: Dict[datetime, Booking] = dict()
 
     def html_filter_entry_without_category(self, filter: bool = True):
         result = "<table class='table_basic'><tr><th>Date</th><th>Category</th><th>Type</th><th>Amount</th><th>Payee</th><th>Comment</th></tr>"
@@ -38,6 +38,11 @@ class Bookings(list):
         booking_date = datetime.strptime(booking.date, "%d.%m.%Y").date()
         if not booking_date in self.daterelation:
             self.daterelation[booking_date] = list()
+        for old_booking in self.daterelation[booking_date]:
+            old_booking: Booking
+            if old_booking.payee == booking.payee and old_booking.amount == booking.amount:
+                logging.warning(f"Ignoring:\n     {booking}\n  as possible duplicate of\n     {old_booking}")
+                return
         self.daterelation[booking_date].append(booking)
         super().append(booking)
 
