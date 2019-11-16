@@ -68,7 +68,7 @@ class Bookings(list):
              end_date: Optional[date] = None):
         """
         save bookings, if start or end date are given the export will be limited to dates between
-        if no filename is given, the file will be saved to "bookings_exported_%date_string%"
+        if no filename is given, the file will be saved to "bookings_exported_%date_string%.csv"
         %date_string% will be always replaced to YYYY-mm-dd_to_YYYY-mm-dd (start to end date)
         """
         if start_date is None:
@@ -76,7 +76,7 @@ class Bookings(list):
         if end_date is None:
             end_date = self.end_date
         if filename is None:
-            filename = "bookings_exported_%date_string%"
+            filename = "bookings_exported_%date_string%.csv"
         if "%date_string%" in filename:
             filename = filename.replace("%date_string%", f"{start_date:%Y-%m-%d}_to_{end_date:%Y-%m-%d}")
         with open(filename, "w", newline="\n", encoding="utf-8") as fp:
