@@ -2,41 +2,55 @@ import csv
 import re
 import subprocess
 import tempfile
+from logging import getLogger
+
 from .bookings import Bookings
 from .booking import Booking
+
+logger = getLogger("statement_reader.reader")
 
 
 def csv2bookings(filename):
     """
-    Reads an GLS export and creates a bookings file
+    Reads an GLS export (new version) and creates a bookings file
     """
     headers = list()
     bookings = Bookings()
+    ignored_lines = list()
+    ignore_rest: bool = False
     with open(filename, newline="", encoding='latin-1') as csvfile:
         spamreader = csv.reader(csvfile, delimiter=';', quotechar='"')
-        line = 0
         for row in spamreader:
-            line = line + 1
-            if line == 1:
-                for cell in row:
-                    headers.append(cell)
-            else:
+            if ignore_rest:
+                ignored_lines.append(";".join(row))
+            elif len(headers) > 1:
+                if len(row) != len(headers):
+                    ignore_rest = True
+                    ignored_lines.append(";".join(row))
+                    continue
                 result = dict()
                 booking = Booking()
                 for cell, header in zip(row, headers):
                     result[header] = cell
 
                 # Comment has to be set first as it is used to determine Payee as well
-                booking.comment = ""
-                for i in range(1, 14):
-                    tmp = result.get(f"VWZ{i}")
-                    if tmp:
-                        booking.comment = f"{booking.comment} {tmp}"
+                comment = result.get('Vorgang/Verwendungszweck').split("\n")
+                booking.comment = "\n".join(comment[1:])
                 booking.date = result.get('Buchungstag')
-                booking.type = result.get('Buchungstext')
-                booking.amount = float(result.get('Betrag').replace(".", "").replace(",", "."))
-                booking.payee = result.get('Auftraggeber/Empfänger')
-                bookings.append(booking)
+                booking.type = comment[0]
+                multiply = -1 if result.get("HS") == "S" else 1
+                booking.amount = float(result.get('Umsatz').replace(".", "").replace(",", ".")) * multiply
+                booking.payee = result.get('Empfänger/Zahlungspflichtiger')
+                bookings.append(booking, ignore_duplicates=False)
+            elif len(row) > 0 and row[0] == "Buchungstag":
+                # Read Headers
+                for cell in row:
+                    headers.append(cell)
+                    if cell == "Umsatz":
+                        headers.append("HS")
+                        break
+        if ignored_lines:
+            logger.debug("Ignored lines: "+'\n'.join(ignored_lines))
     return bookings
 
 
@@ -58,7 +72,7 @@ def data2booking(data, year):
                 # Set payee just in the end, as we need the comment to be read complete before
                 # print(f"Comment: {booking.comment}")
                 booking.payee = payee
-                bookings.append(booking)
+                bookings.append(booking, ignore_duplicates=False)
             booking = Booking()
             vals = re.split("[ ]{4,100}", line)
             # print(vals)

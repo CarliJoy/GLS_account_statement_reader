@@ -1,13 +1,20 @@
-from datetime import datetime
-from typing import Dict
+from datetime import date
+from textwrap import indent
+from typing import Dict, Optional
+import re
+import os
 import logging
 from .booking import Booking
 
+logger = logging.getLogger('statement_reader.bookings')
+logger_dupes = logging.getLogger('statement_reader.duplicates')
 
 class Bookings(list):
+    STRICT_COMPARING: bool = True
+
     def __init__(self):
         super().__init__()
-        self.daterelation: Dict[datetime, Booking] = dict()
+        self.daterelation: Dict[date, list] = dict()
 
     def html_filter_entry_without_category(self, filter: bool = True):
         result = "<table class='table_basic'><tr><th>Date</th><th>Category</th><th>Type</th><th>Amount</th><th>Payee</th><th>Comment</th></tr>"
@@ -19,33 +26,89 @@ class Bookings(list):
     def _repr_html_(self):
         return self.html_filter_entry_without_category(False)
 
+    def __repr__(self):
+        result = " [\n"
+        for itm in self:
+            result += "  " + repr(itm) + "\n"
+        return result + "]"
+
+    def __iter__(self):
+        """ Always sort"""
+        for itm in sorted(super().__iter__()):
+            yield itm
+
     def __add__(self, other: 'Bookings'):
         result = Bookings()
         # for key in sorted(self.daterelation.keys() + other.daterelation.keys()):
         for itm in self:
-            result.append(itm)
+            result.append(itm, ignore_duplicates=True)
         for itm in other:
-            result.append(itm)
+            result.append(itm, ignore_duplicates=True)
         return result
 
-    def save(self, filename):
+    def __iadd__(self, other):
+        """ allow same handling for += like for add"""
+        return self.__add__(other)
+
+    @property
+    def start_date(self):
+        return list(sorted(self.daterelation.keys()))[0]
+
+    @property
+    def end_date(self):
+        return list(sorted(self.daterelation.keys()))[-1]
+
+    def test_logger(self):
+        logger.info("Info")
+        logger.warning("Warning")
+        logger.debug("Debug")
+
+    def save(self, filename: Optional[str] = None,
+             start_date: Optional[date] = None,
+             end_date: Optional[date] = None):
+        """
+        save bookings, if start or end date are given the export will be limited to dates between
+        if no filename is given, the file will be saved to "bookings_exported_%date_string%"
+        %date_string% will be always replaced to YYYY-mm-dd_to_YYYY-mm-dd (start to end date)
+        """
+        if start_date is None:
+            start_date = self.start_date
+        if end_date is None:
+            end_date = self.end_date
+        if filename is None:
+            filename = "bookings_exported_%date_string%"
+        if "%date_string%" in filename:
+            filename = filename.replace("%date_string%", f"{start_date:%Y-%m-%d}_to_{end_date:%Y-%m-%d}")
         with open(filename, "w", newline="\n", encoding="utf-8") as fp:
             fp.write("Date;Category;Type;Amount;Payee;Comment\n")
             for i in self:
-                fp.write(f"{i}\n")
+                i: Booking
+                if i.date > end_date:
+                    break
+                if i.date >= start_date:
+                    fp.write(f"{i}\n")
+        full_path = os.path.abspath(os.path.join(os.curdir, filename))
+        logger.info(f"Saved bookings to '{full_path}'")
 
-    def append(self, booking: Booking):
-        booking_date = datetime.strptime(booking.date, "%d.%m.%Y").date()
-        if not booking_date in self.daterelation:
-            self.daterelation[booking_date] = list()
-        for old_booking in self.daterelation[booking_date]:
-            old_booking: Booking
-            if old_booking.payee == booking.payee and old_booking.amount == booking.amount:
-                logging.warning(f"Ignoring:\n     {booking}\n  as possible duplicate of\n     {old_booking}")
-                return
-        self.daterelation[booking_date].append(booking)
+    def append(self, booking: Booking, ignore_duplicates: bool = True):
+        self.daterelation.setdefault(booking.date, [])
+        if ignore_duplicates:
+            for old_booking in self.daterelation[booking.date]:
+                old_booking: Booking
+                if old_booking.payee == booking.payee and old_booking.amount == booking.amount:
+                    if not self.STRICT_COMPARING:
+                        logger_dupes.warning(f"Ignoring:\n{indent(str(booking), ' ' * 6)}\n  "
+                                       f"as possible duplicate of\n{indent(str(old_booking), ' ' * 6)}")
+                        return
+                    else:
+                        old_comment = re.sub("[\n _-]+","_", old_booking.comment).lower()
+                        new_comment = re.sub("[\n _-]+","_", booking.comment).lower()
+                        if old_comment == new_comment:
+                            logger_dupes.warning(f"Ignoring:\n{indent(str(booking), ' '*6)}\n  "
+                                           f"as duplicate of\n{indent(str(old_booking), ' '*6)}")
+                            return
+        self.daterelation[booking.date].append(booking)
         super().append(booking)
-
 
     def _sum_by_attrib(self, attrib: str) -> Dict[str, float]:
         result = {}

@@ -1,35 +1,82 @@
 import re
+from typing import Optional, Union
+import datetime
+from schwifty import IBAN
+from logging import getLogger
+from textwrap import shorten
+from natsort import index_humansorted, humansorted
+
+logger = getLogger("statement_reader.booking_base")
 
 
 class BookingBase:
     type_convert = {'SEPA-Basislastschrift': "Lastschrift",
-                    'SEPA-Kartenlastschrift': "EC-Kartenzahlung",
-                    "Lastschrift": "Lastschrift",
-                    'Rücklastschr. mang. Deckung': "Rücklastschrift",
-                    'Auszahlung girocard': "Bargeldabhebung",
-                    'Kartenzahlung girocard': "EC-Kartenzahlung",
-                    'Kartenzahlung Maestro': "EC-Kartenzahlung",
-                    'Dauer-Euro-Überweisung': "Überweisung",
-                    'Kontoführung': "Kontogebühren",
-                    'Überweisungs-Gutschrift': "Überweisung",
-                    'Kartenzahlung': "EC-Kartenzahlung",
-                    'Kartenzahlung Debitkarte': "EC-Kartenzahlung",
-                    'Lohn-,Gehalt-,Renten-Gutsch': "Gehalt",
-                    'Auszahlung': "Bargeldabhebung",
-                    'Bargeldauszahlg. Debitkarte': "Bargeldabhebung",
-                    'Internet-Euro-Überweisung': "Überweisung",
-                    'Kartengenerierte Lastschr.': "EC-Kartenzahlung",
-                    'Kontogebühren': "Kontogebühren",
-                    'Gebühren allgemein': "Kontogebühren",
-                    'Zinsen/Kontoführung': "Kontogebühren",
-                    'GLS BankCard Gebühr': "Kontogebühren"}
+                    'SEPA-Kartenlastschrift': 'EC-Kartenzahlung',
+                    'Lastschrift': 'Lastschrift',
+                    'Basislastschrift': 'Lastschrift',
+                    'Rücklastschr. mang. Deckung': 'Rücklastschrift',
+                    'Auszahlung girocard': 'Bargeldabhebung',
+                    'SB-Überweisungsauftr': 'Überweisung',
+                    'Überweisungsauftrag': 'Überweisung',
+                    'Kartenverfügung': 'EC-Kartenzahlung',
+                    'Kartenzahlung girocard': 'EC-Kartenzahlung',
+                    'Kartenzahlung Maestro': 'EC-Kartenzahlung',
+                    'Dauer-Euro-Überweisung': 'Überweisung',
+                    'Dauerauftragsbelast': 'Überweisung',
+                    'Überweisungsgutschr.': 'Überweisung',
+                    'Kontoführung': 'Kontogebühren',
+                    'Überweisungs-Gutschrift': 'Überweisung',
+                    'Kartenzahlung': 'EC-Kartenzahlung',
+                    'Kartenzahlung Debitkarte': 'EC-Kartenzahlung',
+                    'Lohn/Gehalt/Rente': 'Gehalt',
+                    'Lohn-,Gehalt-,Renten-Gutsch': 'Gehalt',
+                    'Auszahlung': 'Bargeldabhebung',
+                    'Bargeldauszahlg. Debitkarte': 'Bargeldabhebung',
+                    'Internet-Euro-Überweisung': 'Überweisung',
+                    'Kartengenerierte Lastschr.': 'EC-Kartenzahlung',
+                    'Kontogebühren': 'Kontogebühren',
+                    'Abschluss': 'Kontogebühren',
+                    'Summenbeleg': 'Kontogebühren',
+                    'Gebühren allgemein': 'Kontogebühren',
+                    'Zinsen/Kontoführung': 'Kontogebühren',
+                    'GLS BankCard Gebühr': 'Kontogebühren'}
 
     def __init__(self):
         self._type = None
-        self.date: str = None
-        self.amount: float = None
+        self._date: Optional[datetime.date] = None
+        self.amount: Optional[float] = None
+        self._iban: Optional[IBAN] = None
         self._wrong_type = None
         self._comment: str = ""
+
+    @property
+    def date(self) -> datetime.date:
+        return self._date
+    
+    @date.setter
+    def date(self, value: Union[str, datetime.date]):
+        if isinstance(value, str):
+            self._date = datetime.datetime.strptime(value, "%d.%m.%Y").date()
+        elif isinstance(value, datetime.date):
+            self._date = value
+        elif isinstance(value, datetime.datetime):
+            self._date = value.date()
+        else:
+            raise ValueError(f"Invalid date type {type(value)} given for date")
+
+    @property
+    def iban(self) -> IBAN:
+        return self._iban
+
+    @iban.setter
+    def iban(self, value: Optional[str]):
+        try:
+            if self._iban is not None:
+                self._iban = IBAN(value)
+            else:
+                self._iban = None
+        except ValueError as e:
+            logger.warning(f"Got invalid IBAN '{value}' (type{type(value)}) - {e}")
 
     @property
     def comment(self) -> str:
@@ -161,6 +208,22 @@ class BookingBase:
 
     def __str__(self):
         return f'{self.date};{self.category};{self.type};{self.amount:.2f};{self.payee};"{self.comment}"'
+
+    def __repr__(self):
+        comment = shorten(self.comment.replace("\n", " "), width=40, placeholder="…")
+        return f'{self.date} Cat: {self.category} Type: {self.type} Amount: {self.amount:.2f} Payee: {self.payee} Comment: "{comment}"'
+
+    def __lt__(self, other: "BookingBase"):
+        if not isinstance(other, BookingBase):
+            raise ValueError("Can only compare BookingBase to other BookingBase object")
+        if self.date == other.date:
+            if self.payee == other.payee:
+                # everything is equal, lets compare comment
+                return humansorted([self.comment, other.comment])[0] == self.comment
+            else:
+                return humansorted([self.payee, other.payee])[0] == self.comment
+        else:
+            return self.date < other.date
 
     @property
     def _tr_(self):
