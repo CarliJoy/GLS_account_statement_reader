@@ -113,7 +113,7 @@ def data2booking(data, year):
             matches = re.fullmatch(
                 "(?P<date1>[0-9]{2}[.][0-9]{2}[.])"
                 "([ ]+(?P<date2>[0-9]{2}[.][0-9]{2}[.]))?"
-                "[ ]*(?P<type>[^0-9]+)"
+                "[ ]*(?P<type>.+?)[ ]+"
                 "(?P<amount>[0-9,.]+[ ]*[HS+-])",
                 line,
             )
@@ -124,11 +124,7 @@ def data2booking(data, year):
                     f"It seem not to follow the format of a typical bank report"
                 )
             matches = matches.groupdict()
-            if matches["date2"] is not None:
-                # Always use the
-                date = matches["date2"]
-            else:
-                date = matches["date1"]
+            date = matches["date1"]
             booking.date = f"{date}{year}"
             booking.type = matches["type"].strip()
             booking.amount = parse_amount_string(matches["amount"])

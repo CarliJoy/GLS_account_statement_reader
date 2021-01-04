@@ -6,6 +6,8 @@ from logging import getLogger
 from textwrap import shorten
 from natsort import humansorted
 
+from statement_reader.exceptions import ParsingError
+
 logger = getLogger("statement_reader.booking_base")
 
 
@@ -58,7 +60,13 @@ class BookingBase:
     @date.setter
     def date(self, value: Union[str, datetime.date]):
         if isinstance(value, str):
-            self._date = datetime.datetime.strptime(value, "%d.%m.%Y").date()
+            try:
+                self._date = datetime.datetime.strptime(value, "%d.%m.%Y").date()
+            except ValueError as e:
+                raise ParsingError(
+                    f"Could not parse date from string '{value}', "
+                    f"it seems to be invalid: {e}"
+                )
         elif isinstance(value, datetime.date):
             self._date = value
         elif isinstance(value, datetime.datetime):
