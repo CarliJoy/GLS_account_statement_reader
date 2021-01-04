@@ -96,14 +96,22 @@ def pdf2bookings(filepath):
         subprocess.run(['pdftotext', '-layout', filepath, tmpfile.name])
         # extract the year
         result = subprocess.run(
-            f"cat {tmpfile.name} |  sed -n -e '/erstellt am [23][0-9][.][01][0-9].20[0-9][0-9]/ {{p;q}}' | sed 's/^.*am [23][0-9][.][01][0-9].\\(20[0-9][0-9]\\)/\\1/'",
-            shell=True, stdout=subprocess.PIPE, encoding="UTF-8")
+            f"cat {tmpfile.name} "
+            "| sed -n -e '/erstellt am [23][0-9][.][01][0-9].20[0-9][0-9]/ {{p;q}}'"
+            " | sed 's/^.*am [23][0-9][.][01][0-9].\\(20[0-9][0-9]\\)/\\1/'",
+            shell=True, stdout=subprocess.PIPE, encoding="UTF-8"
+        )
         year = result.stdout.replace("\n", "").strip()
-        # Now just extract the actual lines containing a transfer by looking at every block that starts with the date
-        # the first sed is used to remove all
+        # Now just extract the actual lines containing a transfer
+        # by looking at every block that starts with the date
+        # the first sed is used to remove all white lines before a date for easier
+        # processing
         result = subprocess.run(
-            f"cat {tmpfile.name} | sed 's/^[ ]*\\([0-3][0-9][.][0-1][0-9].[ ]*\\) /\\1    /' | sed -ne '/[0-3][0-9][.][0-1][0-9].[ ]\\{{1,4\\}}/,/^[_ \\t-]*\(SALDO NEU.*\)\{{0,1\}}$/ p' | sed '/^[_ \\t-]*$/ d'",
-            shell=True, stdout=subprocess.PIPE, encoding="UTF-8")
+            f"cat {tmpfile.name} | sed 's/^[ ]*\\([0-3][0-9][.][0-1][0-9].[ ]*\\) /\\1    /'"
+            "| sed -ne '/[0-3][0-9][.][0-1][0-9].[ ]\\{{1,4\\}}/,/^[_ \\t-]*\(SALDO NEU.*\)\{{0,1\}}$/ p'"
+            "| sed '/^[_ \\t-]*$/ d'",
+            shell=True, stdout=subprocess.PIPE, encoding="UTF-8"
+        )
 
         return data2booking(re.split("\n", result.stdout), year)
 
