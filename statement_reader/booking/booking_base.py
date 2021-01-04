@@ -4,7 +4,7 @@ import datetime
 from schwifty import IBAN
 from logging import getLogger
 from textwrap import shorten
-from natsort import index_humansorted, humansorted
+from natsort import humansorted
 
 logger = getLogger("statement_reader.booking_base")
 
@@ -243,11 +243,24 @@ class BookingBase:
 
     def __str__(self):
         comment = self.comment.replace("\n", " ")
-        return f'{self.date};{self.category};{self.type};{self.amount:.2f};{self.payee};"{comment}"'
+        return (
+            f"{self.date};"
+            f"{self.category};"
+            f"{self.type};"
+            f"{self.amount:.2f};"
+            f"{self.payee};"
+            f'"{comment}"'
+        )
 
     def __repr__(self):
         comment = shorten(self.comment.replace("\n", " "), width=40, placeholder="…")
-        return f'{self.date} Cat: {self.category} Type: {self.type} Amount: {self.amount:.2f} Payee: {self.payee} Comment: "{comment}"'
+        return (
+            f"{self.date} Cat: {self.category} "
+            f"Type: {self.type} "
+            f"Amount: {self.amount:.2f} "
+            f"Payee: {self.payee} "
+            f'Comment: "{comment}"'
+        )
 
     def __lt__(self, other: "BookingBase"):
         if not isinstance(other, BookingBase):
@@ -264,4 +277,11 @@ class BookingBase:
     @property
     def _tr_(self):
         comment = self.comment.replace("\n", " ")
-        return f"<td>{self.date}</td><td>{self.category}</td><td>{self.type}</td><td class='number_cell'>{self.amount:.2f}</td><td>{self.payee}</td><td class='comment_cell'>{comment}</td>"
+        return (
+            f"<td>{self.date}</td>"
+            f"<td>{self.category}</td>"
+            f"<td>{self.type}</td>"
+            f"<td class='number_cell'>{self.amount:.2f}</td>"
+            f"<td>{self.payee}</td>"
+            f"<td class='comment_cell'>{comment}</td>"
+        )
