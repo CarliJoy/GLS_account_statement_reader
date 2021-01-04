@@ -1,14 +1,32 @@
 import csv
 import re
+import warnings
 import subprocess
-import tempfile
 from logging import getLogger
+from os import PathLike
+from typing import List, Tuple
+
+from pdfminer.high_level import extract_text
+from pdfminer.pdfdocument import PDFTextExtractionNotAllowedWarning
 
 from .bookings import Bookings
 from .booking import Booking
-from .exceptions import ParsingError
+from .exceptions import ParsingError, UnableToExtractDate
 
 logger = getLogger("statement_reader.reader")
+
+RE_BOOKING_LINE_START = re.compile("^[ \t]*[0-3][0-9][.][0-1][0-9].[ \t]+")
+
+RE_BOOKING_LINE = re.compile(
+    "(?P<date1>[0-9]{2}[.][0-9]{2}[.])"
+    "([ ]+(?P<date2>[0-9]{2}[.][0-9]{2}[.]))?"
+    "[ ]*(?P<type>.+?)[ ]+"
+    "(?P<amount>[0-9,.]+[ ]*[HS+-])"
+)
+RE_SEPARATOR_LINE = re.compile("[ _\t-]*")
+RE_CREATION_YEAR = re.compile(
+    "erstellt[ ]+am[ ]+[0-3][0-9][.][01][0-9].(?P<year>20[0-9][0-9])"
+)
 
 
 def parse_amount_string(amount: str) -> float:
@@ -80,7 +98,7 @@ def csv2bookings(filename):
     return bookings
 
 
-def data2booking(data, year):
+def data2booking(data: List[str], year: str):
     booking = None
     bookings = Bookings()
     next_is_payee = False
@@ -107,16 +125,8 @@ def data2booking(data, year):
             '01.04.   Dauer-Euro-Überweisung                                                    1,00-'
             
             """
-            # re.sub("(,[0-9][0-9][ ]+)([H])",)
 
-            vals = re.split("[ ]{4,100}", line)
-            matches = re.fullmatch(
-                "(?P<date1>[0-9]{2}[.][0-9]{2}[.])"
-                "([ ]+(?P<date2>[0-9]{2}[.][0-9]{2}[.]))?"
-                "[ ]*(?P<type>.+?)[ ]+"
-                "(?P<amount>[0-9,.]+[ ]*[HS+-])",
-                line,
-            )
+            matches = RE_BOOKING_LINE.fullmatch(line)
             if matches is None:
                 raise ParsingError(
                     f"Could not parse the line: \n"
@@ -139,44 +149,72 @@ def data2booking(data, year):
     return bookings
 
 
-def pdf2bookings(filepath):
-    with tempfile.NamedTemporaryFile() as tmpfile:
-        # First convert the pdf to text keeping the layout -
-        # all output is handeled in a temporary file that is deleted afters
-        subprocess.run(["pdftotext", "-layout", filepath, tmpfile.name])
-        # extract the year
-        result = subprocess.run(
-            f"cat {tmpfile.name} "
-            "| sed -n -e '/erstellt am [23][0-9][.][01][0-9].20[0-9][0-9]/ {{p;q}}'"
-            "| sed 's/^.*am [23][0-9][.][01][0-9].\\(20[0-9][0-9]\\).*/\\1/'",
-            shell=True,
-            stdout=subprocess.PIPE,
-            encoding="UTF-8",
-        )
-        year = result.stdout.replace("\n", "").strip()
-        if len(year) != 4:
-            raise ParsingError(
-                f"Could not extract year from {filepath}. "
-                f"Extracted {year} which seems not to be a correct year."
-            )
-        # Now just extract the actual lines containing a transfer
-        # by looking at every block that starts with the date
-        # the first sed is used to remove all white lines before a date for easier
-        # processing
-        result = subprocess.run(
-            f"cat {tmpfile.name} "
-            # Add some spaces after each date to better identify date lines
-            "| sed 's/^[ ]*\\([0-3][0-9][.][0-1][0-9].[ ]*\\) /\\1    /'"
-            # Remove everything that is not a booking
-            "| sed -ne '/[0-3][0-9][.][0-1][0-9].[ ]\\{1,4\\}/,/^[_ \\t-]*\\(SALDO NEU.*\\)\{0,1\}$/ p'"
-            # Remove lines just containing _ or -
-            "| sed '/^[_ \\t-]*$/ d'",
-            shell=True,
-            stdout=subprocess.PIPE,
-            encoding="UTF-8",
-        )
+def get_pdf_text_with_layout(filepath: PathLike) -> str:
+    with warnings.catch_warnings():
+        # Ignore warning that text extraction is not allowed by the PDF
+        warnings.filterwarnings("ignore", category=PDFTextExtractionNotAllowedWarning)
+        text = extract_text(filepath)
+    if len(text.splitlines()) > 10:
+        return text
+    logger.debug("Using poppler to extract text.")
+    result = subprocess.run(
+        ["pdftotext", "-layout", filepath, "-"],
+        stderr=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+    )
+    return result.stdout.decode("UTF-8")
 
-        return data2booking(re.split("\n", result.stdout), year)
+
+def pdf2data_and_year(text: str, filepath: PathLike) -> Tuple[List[str], str]:
+    """
+    Parse PDF and extract all booking strings and the booking year
+    :param text: the text to analyse for bookings
+    :param filepath: Only for sane error reporting
+    :return: List of bookings, year of the bookings
+    """
+    # Extract the creation date to get the correct year for the entries
+    try:
+        match = next(RE_CREATION_YEAR.finditer(text))
+    except StopIteration:
+        raise UnableToExtractDate(f"Could not extract creation date from '{filepath}'.")
+    else:
+        year = match.groupdict()["year"]
+
+    # Now extract all booking values
+    lines: List[str] = text.splitlines()
+    # booking values
+    data: List[str] = []
+
+    beginning_found = False
+    for line in lines:
+        do_append = False
+        # Every booking should start with a data
+        if RE_BOOKING_LINE_START.match(line) is not None:
+            beginning_found = True
+            do_append = True
+            line = line.strip()
+        # followed by indented lines
+        elif beginning_found and len(line) > 0 and line[0] == " ":
+            if RE_SEPARATOR_LINE.fullmatch(line) is None:
+                do_append = True
+            else:
+                # but if this indented lines only consists of separator characters
+                # it is probably the end of booking section
+                beginning_found = False
+        else:
+            beginning_found = False
+            do_append = False
+
+        if do_append:
+            # Only strip the right as the front is used to determine th
+            data.append(line.rstrip())
+    return data, year
+
+
+def pdf2bookings(filepath: PathLike):
+    logger.debug(f"Reading {filepath}")
+    text = get_pdf_text_with_layout(filepath)
+    return data2booking(*pdf2data_and_year(text, filepath))
 
 
 def txt2bookings(filepath, year):
