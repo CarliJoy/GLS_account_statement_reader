@@ -10,36 +10,38 @@ logger = getLogger("statement_reader.booking_base")
 
 
 class BookingBase:
-    type_convert = {'SEPA-Basislastschrift': "Lastschrift",
-                    'SEPA-Kartenlastschrift': 'EC-Kartenzahlung',
-                    'Lastschrift': 'Lastschrift',
-                    'Basislastschrift': 'Lastschrift',
-                    'Rücklastschr. mang. Deckung': 'Rücklastschrift',
-                    'Auszahlung girocard': 'Bargeldabhebung',
-                    'SB-Überweisungsauftr': 'Überweisung',
-                    'Überweisungsauftrag': 'Überweisung',
-                    'Kartenverfügung': 'EC-Kartenzahlung',
-                    'Kartenzahlung girocard': 'EC-Kartenzahlung',
-                    'Kartenzahlung Maestro': 'EC-Kartenzahlung',
-                    'Dauer-Euro-Überweisung': 'Überweisung',
-                    'Dauerauftragsbelast': 'Überweisung',
-                    'Überweisungsgutschr.': 'Überweisung',
-                    'Kontoführung': 'Kontogebühren',
-                    'Überweisungs-Gutschrift': 'Überweisung',
-                    'Kartenzahlung': 'EC-Kartenzahlung',
-                    'Kartenzahlung Debitkarte': 'EC-Kartenzahlung',
-                    'Lohn/Gehalt/Rente': 'Gehalt',
-                    'Lohn-,Gehalt-,Renten-Gutsch': 'Gehalt',
-                    'Auszahlung': 'Bargeldabhebung',
-                    'Bargeldauszahlg. Debitkarte': 'Bargeldabhebung',
-                    'Internet-Euro-Überweisung': 'Überweisung',
-                    'Kartengenerierte Lastschr.': 'EC-Kartenzahlung',
-                    'Kontogebühren': 'Kontogebühren',
-                    'Abschluss': 'Kontogebühren',
-                    'Summenbeleg': 'Kontogebühren',
-                    'Gebühren allgemein': 'Kontogebühren',
-                    'Zinsen/Kontoführung': 'Kontogebühren',
-                    'GLS BankCard Gebühr': 'Kontogebühren'}
+    type_convert = {
+        "SEPA-Basislastschrift": "Lastschrift",
+        "SEPA-Kartenlastschrift": "EC-Kartenzahlung",
+        "Lastschrift": "Lastschrift",
+        "Basislastschrift": "Lastschrift",
+        "Rücklastschr. mang. Deckung": "Rücklastschrift",
+        "Auszahlung girocard": "Bargeldabhebung",
+        "SB-Überweisungsauftr": "Überweisung",
+        "Überweisungsauftrag": "Überweisung",
+        "Kartenverfügung": "EC-Kartenzahlung",
+        "Kartenzahlung girocard": "EC-Kartenzahlung",
+        "Kartenzahlung Maestro": "EC-Kartenzahlung",
+        "Dauer-Euro-Überweisung": "Überweisung",
+        "Dauerauftragsbelast": "Überweisung",
+        "Überweisungsgutschr.": "Überweisung",
+        "Kontoführung": "Kontogebühren",
+        "Überweisungs-Gutschrift": "Überweisung",
+        "Kartenzahlung": "EC-Kartenzahlung",
+        "Kartenzahlung Debitkarte": "EC-Kartenzahlung",
+        "Lohn/Gehalt/Rente": "Gehalt",
+        "Lohn-,Gehalt-,Renten-Gutsch": "Gehalt",
+        "Auszahlung": "Bargeldabhebung",
+        "Bargeldauszahlg. Debitkarte": "Bargeldabhebung",
+        "Internet-Euro-Überweisung": "Überweisung",
+        "Kartengenerierte Lastschr.": "EC-Kartenzahlung",
+        "Kontogebühren": "Kontogebühren",
+        "Abschluss": "Kontogebühren",
+        "Summenbeleg": "Kontogebühren",
+        "Gebühren allgemein": "Kontogebühren",
+        "Zinsen/Kontoführung": "Kontogebühren",
+        "GLS BankCard Gebühr": "Kontogebühren",
+    }
 
     def __init__(self):
         self._type = None
@@ -52,7 +54,7 @@ class BookingBase:
     @property
     def date(self) -> datetime.date:
         return self._date
-    
+
     @date.setter
     def date(self, value: Union[str, datetime.date]):
         if isinstance(value, str):
@@ -85,7 +87,7 @@ class BookingBase:
     @comment.setter
     def comment(self, value: str):
         # ignore duplicate spaces
-        self._comment =re.sub("[ ]+"," ", value)
+        self._comment = re.sub("[ ]+", " ", value)
 
     @property
     def type(self) -> str:
@@ -105,7 +107,9 @@ class BookingBase:
             print(f"Unkown booking type '{value}'")
         else:
             if value != self._type:
-                print(f"Reset type from '{self._type}' ({self._wrong_type}) to '{value}'")
+                print(
+                    f"Reset type from '{self._type}' ({self._wrong_type}) to '{value}'"
+                )
                 self._type = value
 
     @property
@@ -117,10 +121,29 @@ class BookingBase:
 
     def _set_payee(self, value: str):
 
-        beginnings = ["TAZ", "POCO", "REWE", "Denns", "DEBEKA", "Allianz", "IKK", "OBI ", "DB ", "Rossmann",
-                      "Thalia", "Combi ", "AKTIV UND IRMA", "KFW", ]
+        beginnings = [
+            "TAZ",
+            "POCO",
+            "REWE",
+            "Denns",
+            "DEBEKA",
+            "Allianz",
+            "IKK",
+            "OBI ",
+            "DB ",
+            "Rossmann",
+            "Thalia",
+            "Combi ",
+            "AKTIV UND IRMA",
+            "KFW",
+        ]
 
-        contains = {"SATURN": "Saturn", "FRISCHEMARKT": "EDEKA", "EDEKA": "EDEKA", "LIDL": "LIDL" }
+        contains = {
+            "SATURN": "Saturn",
+            "FRISCHEMARKT": "EDEKA",
+            "EDEKA": "EDEKA",
+            "LIDL": "LIDL",
+        }
 
         paypals = {"spotify": "Spotify", "MUDJEANS": "Mudjeans", "TAZ": "TAZ"}
 
@@ -163,8 +186,20 @@ class BookingBase:
 
     def _get_category(self) -> str:
         insurances = ["IKK", "Allianz", "DEBEKA"]
-        newspaper = ["TAZ", "Stiftung Warentest", ]
-        grocery = ["Combi", "EDEKA", "AKTIV UND IRMA", "Combi", "REWE", "Denns", "Superbiomarkt", "LIDL"]
+        newspaper = [
+            "TAZ",
+            "Stiftung Warentest",
+        ]
+        grocery = [
+            "Combi",
+            "EDEKA",
+            "AKTIV UND IRMA",
+            "Combi",
+            "REWE",
+            "Denns",
+            "Superbiomarkt",
+            "LIDL",
+        ]
         anschaffung_sonstig = ["PayPal", "AMAZON", "Pollin", "Saturn", "Reichelt"]
         if self.type == "Bargeldabhebung":
             return "Cash Withdrawal"
@@ -207,7 +242,7 @@ class BookingBase:
         return self._get_category()
 
     def __str__(self):
-        comment = self.comment.replace("\n"," ")
+        comment = self.comment.replace("\n", " ")
         return f'{self.date};{self.category};{self.type};{self.amount:.2f};{self.payee};"{comment}"'
 
     def __repr__(self):

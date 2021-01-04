@@ -23,11 +23,11 @@ def parse_amount_string(amount: str) -> float:
     :return:
     """
     # Replace H and S
-    amount = amount.replace('H', '+').replace('S',  '-')
+    amount = amount.replace("H", "+").replace("S", "-")
     # Remove german thousand separator
-    amount = amount.replace('.', '')
+    amount = amount.replace(".", "")
     # Replace german decimal separator with english
-    amount = amount.replace(',', '.')
+    amount = amount.replace(",", ".")
     # Put the sign at the correct place and trim
     amount = amount[-1] + amount[:-1].strip()
     return float(amount)
@@ -41,8 +41,8 @@ def csv2bookings(filename):
     bookings = Bookings()
     ignored_lines = list()
     ignore_rest: bool = False
-    with open(filename, newline="", encoding='latin-1') as csvfile:
-        spamreader = csv.reader(csvfile, delimiter=';', quotechar='"')
+    with open(filename, newline="", encoding="latin-1") as csvfile:
+        spamreader = csv.reader(csvfile, delimiter=";", quotechar='"')
         for row in spamreader:
             if ignore_rest:
                 ignored_lines.append(";".join(row))
@@ -57,13 +57,16 @@ def csv2bookings(filename):
                     result[header] = cell
 
                 # Comment has to be set first as it is used to determine Payee as well
-                comment = result.get('Vorgang/Verwendungszweck').split("\n")
+                comment = result.get("Vorgang/Verwendungszweck").split("\n")
                 booking.comment = "\n".join(comment[1:])
-                booking.date = result.get('Buchungstag')
+                booking.date = result.get("Buchungstag")
                 booking.type = comment[0]
                 multiply = -1 if result.get("HS") == "S" else 1
-                booking.amount = float(result.get('Umsatz').replace(".", "").replace(",", ".")) * multiply
-                booking.payee = result.get('Empfänger/Zahlungspflichtiger')
+                booking.amount = (
+                    float(result.get("Umsatz").replace(".", "").replace(",", "."))
+                    * multiply
+                )
+                booking.payee = result.get("Empfänger/Zahlungspflichtiger")
                 bookings.append(booking, ignore_duplicates=False)
             elif len(row) > 0 and row[0] == "Buchungstag":
                 # Read Headers
@@ -73,7 +76,7 @@ def csv2bookings(filename):
                         headers.append("HS")
                         break
         if ignored_lines:
-            logger.debug("Ignored lines: "+'\n'.join(ignored_lines))
+            logger.debug("Ignored lines: " + "\n".join(ignored_lines))
     return bookings
 
 
@@ -104,15 +107,15 @@ def data2booking(data, year):
             '01.04.   Dauer-Euro-Überweisung                                                    1,00-'
             
             """
-            #re.sub("(,[0-9][0-9][ ]+)([H])",)
+            # re.sub("(,[0-9][0-9][ ]+)([H])",)
 
             vals = re.split("[ ]{4,100}", line)
             matches = re.fullmatch(
-                '(?P<date1>[0-9]{2}[.][0-9]{2}[.])'
-                '([ ]+(?P<date2>[0-9]{2}[.][0-9]{2}[.]))?'
-                '[ ]*(?P<type>[^0-9]+)'
-                '(?P<amount>[0-9,.]+[ ]*[HS+-])',
-                line
+                "(?P<date1>[0-9]{2}[.][0-9]{2}[.])"
+                "([ ]+(?P<date2>[0-9]{2}[.][0-9]{2}[.]))?"
+                "[ ]*(?P<type>[^0-9]+)"
+                "(?P<amount>[0-9,.]+[ ]*[HS+-])",
+                line,
             )
             if matches is None:
                 raise ParsingError(
@@ -121,14 +124,14 @@ def data2booking(data, year):
                     f"It seem not to follow the format of a typical bank report"
                 )
             matches = matches.groupdict()
-            if matches['date2'] is not None:
+            if matches["date2"] is not None:
                 # Always use the
-                date = matches['date2']
+                date = matches["date2"]
             else:
-                date = matches['date1']
+                date = matches["date1"]
             booking.date = f"{date}{year}"
-            booking.type = matches['type'].strip()
-            booking.amount = parse_amount_string(matches['amount'])
+            booking.type = matches["type"].strip()
+            booking.amount = parse_amount_string(matches["amount"])
             booking.comment = ""
             next_is_payee = True
         elif next_is_payee:
@@ -144,13 +147,15 @@ def pdf2bookings(filepath):
     with tempfile.NamedTemporaryFile() as tmpfile:
         # First convert the pdf to text keeping the layout -
         # all output is handeled in a temporary file that is deleted afters
-        subprocess.run(['pdftotext', '-layout', filepath, tmpfile.name])
+        subprocess.run(["pdftotext", "-layout", filepath, tmpfile.name])
         # extract the year
         result = subprocess.run(
             f"cat {tmpfile.name} "
             "| sed -n -e '/erstellt am [23][0-9][.][01][0-9].20[0-9][0-9]/ {{p;q}}'"
             "| sed 's/^.*am [23][0-9][.][01][0-9].\\(20[0-9][0-9]\\).*/\\1/'",
-            shell=True, stdout=subprocess.PIPE, encoding="UTF-8"
+            shell=True,
+            stdout=subprocess.PIPE,
+            encoding="UTF-8",
         )
         year = result.stdout.replace("\n", "").strip()
         if len(year) != 4:
@@ -167,7 +172,9 @@ def pdf2bookings(filepath):
             "| sed 's/^[ ]*\\([0-3][0-9][.][0-1][0-9].[ ]*\\) /\\1    /'"
             "| sed -ne '/[0-3][0-9][.][0-1][0-9].[ ]\\{{1,4\\}}/,/^[_ \\t-]*\\(SALDO NEU.*\\)\{{0,1\}}$/ p'"
             "| sed '/^[_ \\t-]*$/ d'",
-            shell=True, stdout=subprocess.PIPE, encoding="UTF-8"
+            shell=True,
+            stdout=subprocess.PIPE,
+            encoding="UTF-8",
         )
 
         return data2booking(re.split("\n", result.stdout), year)
