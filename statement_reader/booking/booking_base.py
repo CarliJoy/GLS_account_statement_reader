@@ -200,14 +200,15 @@ class BookingBase:
         elif "miete" in self.comment.lower():
             return "Miete"
         else:
-            return ""
+            return "Unknown"
 
     @property
     def category(self) -> str:
         return self._get_category()
 
     def __str__(self):
-        return f'{self.date};{self.category};{self.type};{self.amount:.2f};{self.payee};"{self.comment}"'
+        comment = self.comment.replace("\n"," ")
+        return f'{self.date};{self.category};{self.type};{self.amount:.2f};{self.payee};"{comment}"'
 
     def __repr__(self):
         comment = shorten(self.comment.replace("\n", " "), width=40, placeholder="…")
