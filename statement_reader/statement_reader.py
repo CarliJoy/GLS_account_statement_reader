@@ -169,8 +169,11 @@ def pdf2bookings(filepath):
         # processing
         result = subprocess.run(
             f"cat {tmpfile.name} "
+            # Add some spaces after each date to better identify date lines
             "| sed 's/^[ ]*\\([0-3][0-9][.][0-1][0-9].[ ]*\\) /\\1    /'"
-            "| sed -ne '/[0-3][0-9][.][0-1][0-9].[ ]\\{{1,4\\}}/,/^[_ \\t-]*\\(SALDO NEU.*\\)\{{0,1\}}$/ p'"
+            # Remove everything that is not a booking
+            "| sed -ne '/[0-3][0-9][.][0-1][0-9].[ ]\\{1,4\\}/,/^[_ \\t-]*\\(SALDO NEU.*\\)\{0,1\}$/ p'"
+            # Remove lines just containing _ or -
             "| sed '/^[_ \\t-]*$/ d'",
             shell=True,
             stdout=subprocess.PIPE,
