@@ -1,7 +1,7 @@
 import csv
 import re
-import warnings
 import subprocess
+import warnings
 from logging import getLogger
 from os import PathLike
 from typing import List, Tuple
@@ -9,8 +9,8 @@ from typing import List, Tuple
 from pdfminer.high_level import extract_text
 from pdfminer.pdfdocument import PDFTextExtractionNotAllowedWarning
 
-from .bookings import Bookings
 from .booking import Booking
+from .bookings import Bookings
 from .exceptions import ParsingError, UnableToExtractDate
 
 logger = getLogger("statement_reader.reader")
@@ -113,17 +113,19 @@ def data2booking(data: List[str], year: str):
         # Check for new entry
         if line[0] != " ":
             if booking:
-                # Set payee just in the end, as we need the comment to be read complete before
+                # Set payee just in the end, as we need the comment to be
+                # read complete before
                 # print(f"Comment: {booking.comment}")
                 booking.payee = payee
                 bookings.append(booking, ignore_duplicates=False)
             booking = Booking()
+            # noqa: E501
             """
             Example for new file
-            '02.01.    01.01. Überweisungsgutschr.                                                                                          1.000,00 H'
+            '02.01.    01.01. Überweisungsgutschr.                           1.000,00 H'
             Example for old file
-            '01.04.   Dauer-Euro-Überweisung                                                    1,00-'
-            
+            '01.04.   Dauer-Euro-Überweisung                                      1,00-'
+
             """
 
             matches = RE_BOOKING_LINE.fullmatch(line.strip())
@@ -164,8 +166,8 @@ def get_pdf_text_with_layout(filepath: PathLike, force_poppler: bool = False) ->
     or pdftotext from poppler.
 
     We first try the PDF only variant but it is not working as stable as pdftotext
-    and Carli* is not willing to spend time into fine tuning it for ever changing reports
-    only to reduce external dependencies
+    and Carli* is not willing to spend time into fine tuning it for ever changing
+    reports only to reduce external dependencies
 
     :param filepath:
     :param force_poppler:

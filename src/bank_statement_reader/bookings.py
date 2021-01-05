@@ -1,11 +1,11 @@
+import logging
+import re
 from datetime import date
 from os import PathLike
 from pathlib import Path
 from textwrap import indent
 from typing import Dict, Optional
-import re
-import os
-import logging
+
 from .booking import Booking
 
 logger = logging.getLogger("statement_reader.bookings")
@@ -20,9 +20,11 @@ class Bookings(list):
         self.daterelation: Dict[date, list] = dict()
 
     def html_filter_entry_without_category(self, filter: bool = True):
-        result = "<table class='table_basic'>" \
-                 "<tr><th>Date</th><th>Category</th><th>Type</th>" \
-                 "<th>Amount</th><th>Payee</th><th>Comment</th></tr>"
+        result = (
+            "<table class='table_basic'>"
+            "<tr><th>Date</th><th>Category</th><th>Type</th>"
+            "<th>Amount</th><th>Payee</th><th>Comment</th></tr>"
+        )
         for i in self:
             if not i.category or not filter:
                 result = f"{result}\n<tr>{i._tr_}</tr>"

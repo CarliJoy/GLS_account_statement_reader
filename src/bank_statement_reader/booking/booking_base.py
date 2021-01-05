@@ -1,11 +1,11 @@
-import re
-from typing import Optional, Union
 import datetime
-from schwifty import IBAN
+import re
 from logging import getLogger
 from textwrap import shorten
-from natsort import humansorted
+from typing import Optional, Union
 
+from natsort import humansorted
+from schwifty import IBAN
 from statement_reader.exceptions import ParsingError
 
 logger = getLogger("statement_reader.booking_base")
