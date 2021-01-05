@@ -1,4 +1,6 @@
 from datetime import date
+from os import PathLike
+from pathlib import Path
 from textwrap import indent
 from typing import Dict, Optional
 import re
@@ -68,7 +70,7 @@ class Bookings(list):
 
     def save(
         self,
-        filename: Optional[str] = None,
+        filename: Optional[PathLike] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
     ):
@@ -81,14 +83,16 @@ class Bookings(list):
         %date_string% will be always replaced to YYYY-mm-dd_to_YYYY-mm-dd
             (start to end date)
         """
+        if not isinstance(filename, Path):
+            filename = Path(filename)
         if start_date is None:
             start_date = self.start_date
         if end_date is None:
             end_date = self.end_date
         if filename is None:
-            filename = "bookings_exported_%date_string%.csv"
-        if "%date_string%" in filename:
-            filename = filename.replace(
+            filename = Path(".").absolute() / "bookings_exported_%date_string%.csv"
+        if "%date_string%" in filename.name:
+            filename = filename.parent / str(filename.name).replace(
                 "%date_string%", f"{start_date:%Y-%m-%d}_to_{end_date:%Y-%m-%d}"
             )
         with open(filename, "w", newline="\n", encoding="utf-8") as fp:
@@ -99,8 +103,7 @@ class Bookings(list):
                     break
                 if i.date >= start_date:
                     fp.write(f"{i}\n")
-        full_path = os.path.abspath(os.path.join(os.curdir, filename))
-        logger.info(f"Saved bookings to '{full_path}'")
+        logger.info(f"Saved bookings to '{filename.absolute()}'")
 
     def append(self, booking: Booking, ignore_duplicates: bool = True):
         self.daterelation.setdefault(booking.date, [])

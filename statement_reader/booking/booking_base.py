@@ -107,12 +107,17 @@ class BookingBase:
         Set the type of transaction - can be done only once and has to be a valid type!
         """
         value = re.sub("Wertstellung: [0-9]{2}.[0-9]{2}.", "", value).strip()
+        # New bank records included strage PN values, so we need to extract them
+        value = re.sub("PN:[ ]*[0-9]{1,10}", " ", value)
+        # Also the refer to the appendix, we don't like that
+        value = re.sub("(lt.[ ]*)?[ ]*Anlage[ ]*[0-9]+", " ", value)
+        value = value.strip()
         type_convert = self.__class__.type_convert
         if value in type_convert and self._type is None:
             self._type = type_convert.get(value)
         elif value not in type_convert:
             self._wrong_type = value
-            print(f"Unkown booking type '{value}'")
+            print(f"Unknown booking type '{value}'")
         else:
             if value != self._type:
                 print(

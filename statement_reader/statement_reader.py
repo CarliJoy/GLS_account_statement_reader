@@ -18,10 +18,10 @@ logger = getLogger("statement_reader.reader")
 RE_BOOKING_LINE_START = re.compile("^[ \t]*[0-3][0-9][.][0-1][0-9].[ \t]+")
 
 RE_BOOKING_LINE = re.compile(
-    "(?P<date1>[0-9]{2}[.][0-9]{2}[.])"
+    "^(?P<date1>[0-9]{2}[.][0-9]{2}[.])"
     "([ ]+(?P<date2>[0-9]{2}[.][0-9]{2}[.]))?"
     "[ ]*(?P<type>.+?)[ ]+"
-    "(?P<amount>[0-9,.]+[ ]*[HS+-])"
+    "(?P<amount>[0-9,.]+[ ]*[HS+-])$"
 )
 RE_SEPARATOR_LINE = re.compile("[ _\t-]*")
 RE_CREATION_YEAR = re.compile(
@@ -126,13 +126,22 @@ def data2booking(data: List[str], year: str):
             
             """
 
-            matches = RE_BOOKING_LINE.fullmatch(line)
+            matches = RE_BOOKING_LINE.fullmatch(line.strip())
             if matches is None:
-                raise ParsingError(
-                    f"Could not parse the line: \n"
-                    f"  '{line}'\n"
-                    f"It seem not to follow the format of a typical bank report"
-                )
+                if "Anlage" in line:
+                    # I kind of hate the GLS bank for creating reports
+                    # that are so different and so hard to parse, could they
+                    # not simply allow all time CSV downloads???
+                    logger.info(
+                        f"Ignoring line {line} as it seems to be only a summary"
+                    )
+                    continue
+                else:
+                    raise ParsingError(
+                        f"Could not parse the line: \n"
+                        f"  '{line}'\n"
+                        f"It seem not to follow the format of a typical bank report"
+                    )
             matches = matches.groupdict()
             date = matches["date1"]
             booking.date = f"{date}{year}"
@@ -149,13 +158,28 @@ def data2booking(data: List[str], year: str):
     return bookings
 
 
-def get_pdf_text_with_layout(filepath: PathLike) -> str:
-    with warnings.catch_warnings():
-        # Ignore warning that text extraction is not allowed by the PDF
-        warnings.filterwarnings("ignore", category=PDFTextExtractionNotAllowedWarning)
-        text = extract_text(filepath)
-    if len(text.splitlines()) > 10:
-        return text
+def get_pdf_text_with_layout(filepath: PathLike, force_poppler: bool = False) -> str:
+    """
+    Extract the layout like text from the PDF, either using pdfminer.six (python only)
+    or pdftotext from poppler.
+
+    We first try the PDF only variant but it is not working as stable as pdftotext
+    and Carli* is not willing to spend time into fine tuning it for ever changing reports
+    only to reduce external dependencies
+
+    :param filepath:
+    :param force_poppler:
+    :return:
+    """
+    if not force_poppler:
+        with warnings.catch_warnings():
+            # Ignore warning that text extraction is not allowed by the PDF
+            warnings.filterwarnings(
+                "ignore", category=PDFTextExtractionNotAllowedWarning
+            )
+            text = extract_text(filepath)
+        if len(text.splitlines()) > 10:
+            return text
     logger.debug("Using poppler to extract text.")
     result = subprocess.run(
         ["pdftotext", "-layout", filepath, "-"],
@@ -213,8 +237,13 @@ def pdf2data_and_year(text: str, filepath: PathLike) -> Tuple[List[str], str]:
 
 def pdf2bookings(filepath: PathLike):
     logger.debug(f"Reading {filepath}")
-    text = get_pdf_text_with_layout(filepath)
-    return data2booking(*pdf2data_and_year(text, filepath))
+    try:
+        text = get_pdf_text_with_layout(filepath)
+        return data2booking(*pdf2data_and_year(text, filepath))
+    except UnableToExtractDate:
+        # Try again but force the use of poppler
+        text = get_pdf_text_with_layout(filepath, True)
+        return data2booking(*pdf2data_and_year(text, filepath))
 
 
 def txt2bookings(filepath, year):
