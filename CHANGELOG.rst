@@ -7,6 +7,7 @@ Changelog
  * rewrite, reduce use of poppler
  * loads Triodos and new GLS bank PDF reports
  * Use `PyScaffold`_ template to generate a package
+ * Add CLI
 
 2020-11-16
 ==========

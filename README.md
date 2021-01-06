@@ -64,5 +64,4 @@ class Booking(BookingBase):
     def _get_category(self):
         """your custom stuff here"""
         return super()._get_category()
-
 ```
