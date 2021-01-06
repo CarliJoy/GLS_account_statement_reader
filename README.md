@@ -9,7 +9,7 @@ The tool also supports reading the CSV files (which include more information), s
 
 I also tested it with Banking records from the [Triodos Bank](https://www.triodos.de/)
 and it works well. They both using the same banking system, so maybe also other
-"Volksbanken" or "Raifeisenbank" work as well.
+"Volksbank" or "Raiffeisenbank" work as well. Write me an issue
 
 I tested it with the following Banking records so far:
 * GLS 2014-2020
@@ -22,7 +22,29 @@ I tested it with the following Banking records so far:
 
 
 # Usage
-The script is intended to be used with the `jupyter-notebook` for fast analysing data.
+Clone the repro locally, create and activate a new virtual environment
+and run `pip install -e .` within the project folder.
+
+Now you have a new command `statement2csv` available.
+```
+usage: statement2csv [-h] [--out out.csv] statement.pdf [statement.pdf ...]
+
+Convert banking statements (PDF & CSV) to an analysed standard csv form.
+
+positional arguments:
+  statement.pdf  files to open and convert
+
+optional arguments:
+  -h, --help     show this help message and exit
+  --out out.csv  csv file to write the results to
+
+        If no filename is given, the file will be saved to
+            basename_first_file_%date_string%.csv.
+        %date_string% will be always replaced to 'YYYY-mm-dd_to_YYYY-mm-dd'
+                                                 start date  to   end date
+```
+
+Another way to use the project is to use  `jupyter-notebook` for fast analysing data.
 See `example.ipynb` for an idea how to use it.
 
 # Data Protection Note
