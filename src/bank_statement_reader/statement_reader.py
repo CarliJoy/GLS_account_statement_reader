@@ -100,13 +100,16 @@ def csv2bookings(filename) -> Bookings:
 
 
 def data2booking(data: List[str], year: str) -> Bookings:
+    # Last line needs to start with empty character first
+    LAST_LINE = " %%%$$LAST$$%%%"
+
     booking = None
     bookings = Bookings()
     next_is_payee = False
     payee = None
     if data[-1].strip() != "":
         # Make sure the last entry is empty so also the last booking is added
-        data.append("")
+        data.append(LAST_LINE)
     for line in data:
         line = line.replace("\n", "")
         if not line:
@@ -119,6 +122,8 @@ def data2booking(data: List[str], year: str) -> Bookings:
                 # print(f"Comment: {booking.comment}")
                 booking.payee = payee
                 bookings.append(booking, ignore_duplicates=False)
+                if line == LAST_LINE:
+                    break
             booking = Booking()
             # noqa: E501
             """
