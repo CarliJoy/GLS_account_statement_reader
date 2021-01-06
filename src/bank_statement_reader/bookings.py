@@ -65,6 +65,10 @@ class Bookings(list):
     def end_date(self):
         return list(sorted(self.daterelation.keys()))[-1]
 
+    @property
+    def sum(self):
+        return sum([itm for itm in self])
+
     def test_logger(self):
         logger.info("Info")
         logger.warning("Warning")
