@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 import argparse
-import logging
 import sys
 from pathlib import Path
 from typing import List, Optional
 
-from . import Bookings, csv2bookings, pdf2bookings
+from . import Bookings, files2booking
 
 
 def main(args: List[str]):
@@ -14,7 +13,7 @@ def main(args: List[str]):
         description="Convert banking statements (PDF & CSV) "
         "to an analysed standard csv form.",
         epilog="""
-        If no filename is given, the file will be saved to
+        If no filename is given, the file will be saved to:
             basename_first_file_%date_string%.csv.
         %date_string% will be always replaced to 'YYYY-mm-dd_to_YYYY-mm-dd'
                                                  start date  to   end date
@@ -40,27 +39,16 @@ def main(args: List[str]):
 
     args = parser.parse_args(args)
 
-    bookings = Bookings()
+    files = [Path(file_obj.name).absolute() for file_obj in args.input_files]
 
-    outfile_name = ""
-
-    for file_obj in args.input_files:
-        filename = Path(file_obj.name).absolute()
-        if not outfile_name:
-            outfile_name = filename.with_name(f"{filename.stem}_%date_string%.csv")
-        if filename.suffix.lower() == ".pdf":
-            bookings = bookings + pdf2bookings(filename)
-        elif filename.suffix.lower() == ".csv":
-            bookings = bookings + csv2bookings(filename)
-        else:
-            logging.warning(
-                f'Ignoring "{filename}": Only csv and pdf files are supported'
-            )
+    outfile_name = files[0].with_name(f"{files[0].stem}_%date_string%.csv")
 
     if args.output_file is not None:
         outfile_name = Path(args.output_file.name).absolute()
 
-    bookings.save(outfile_name)
+    bookings: Bookings = files2booking(files)
+    outfile_name = bookings.save(outfile_name)
+
     print(f"Successfully wrote {outfile_name}")
 
 

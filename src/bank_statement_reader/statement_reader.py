@@ -4,6 +4,7 @@ import subprocess
 import warnings
 from logging import getLogger
 from os import PathLike
+from pathlib import Path
 from typing import List, Tuple
 
 from pdfminer.high_level import extract_text
@@ -13,7 +14,7 @@ from .booking import Booking
 from .bookings import Bookings
 from .exceptions import ParsingError, UnableToExtractDate
 
-logger = getLogger("statement_reader.reader")
+logger = getLogger("bank_statement_reader.reader")
 
 RE_BOOKING_LINE_START = re.compile("^[ \t]*[0-3][0-9][.][0-1][0-9].[ \t]+")
 
@@ -51,7 +52,7 @@ def parse_amount_string(amount: str) -> float:
     return float(amount)
 
 
-def csv2bookings(filename):
+def csv2bookings(filename) -> Bookings:
     """
     Reads an GLS export (new version) and creates a bookings file
     """
@@ -98,7 +99,7 @@ def csv2bookings(filename):
     return bookings
 
 
-def data2booking(data: List[str], year: str):
+def data2booking(data: List[str], year: str) -> Bookings:
     booking = None
     bookings = Bookings()
     next_is_payee = False
@@ -237,7 +238,7 @@ def pdf2data_and_year(text: str, filepath: PathLike) -> Tuple[List[str], str]:
     return data, year
 
 
-def pdf2bookings(filepath: PathLike):
+def pdf2bookings(filepath: PathLike) -> Bookings:
     logger.debug(f"Reading {filepath}")
     try:
         text = get_pdf_text_with_layout(filepath)
@@ -248,7 +249,23 @@ def pdf2bookings(filepath: PathLike):
         return data2booking(*pdf2data_and_year(text, filepath))
 
 
-def txt2bookings(filepath, year):
+def txt2bookings(filepath, year) -> Bookings:
     with open(filepath, "r", encoding="UTF-8") as fp:
         data = fp.readlines()
     return data2booking(data, year)
+
+
+def files2booking(files: List[Path]) -> Bookings:
+    bookings = Bookings()
+
+    for filename in files:
+        if filename.suffix.lower() == ".pdf":
+            bookings = bookings + pdf2bookings(filename)
+        elif filename.suffix.lower() == ".csv":
+            bookings = bookings + csv2bookings(filename)
+        else:
+            logger.warning(
+                f'Ignoring "{filename}": Only csv and pdf files are supported'
+            )
+
+    return bookings

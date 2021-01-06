@@ -8,8 +8,8 @@ from typing import Dict, Optional
 
 from .booking import Booking
 
-logger = logging.getLogger("statement_reader.bookings")
-logger_dupes = logging.getLogger("statement_reader.duplicates")
+logger = logging.getLogger("bank_statement_reader.bookings")
+logger_dupes = logging.getLogger("bank_statement_reader.duplicates")
 
 
 class Bookings(list):
@@ -75,7 +75,7 @@ class Bookings(list):
         filename: Optional[PathLike] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
-    ):
+    ) -> Path:
         """
         save bookings
 
@@ -84,7 +84,13 @@ class Bookings(list):
             "bookings_exported_%date_string%.csv"
         %date_string% will be always replaced to YYYY-mm-dd_to_YYYY-mm-dd
             (start to end date)
+
+        :param filename: Filename to save result to
+        :param start_date: limit export to start date
+        :param end_date:  limit export until end date
+        :return: filepath of saved filed
         """
+
         if not isinstance(filename, Path):
             filename = Path(filename)
         if start_date is None:
@@ -106,6 +112,7 @@ class Bookings(list):
                 if i.date >= start_date:
                     fp.write(f"{i}\n")
         logger.info(f"Saved bookings to '{filename.absolute()}'")
+        return filename.absolute()
 
     def append(self, booking: Booking, ignore_duplicates: bool = True):
         self.daterelation.setdefault(booking.date, [])

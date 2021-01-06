@@ -17,6 +17,13 @@ finally:
 
 from .booking import Booking
 from .bookings import Bookings
-from .statement_reader import csv2bookings, pdf2bookings, txt2bookings
+from .statement_reader import csv2bookings, files2booking, pdf2bookings, txt2bookings
 
-__all__ = ["csv2bookings", "txt2bookings", "pdf2bookings", "Booking", "Bookings"]
+__all__ = [
+    "csv2bookings",
+    "txt2bookings",
+    "pdf2bookings",
+    "Booking",
+    "Bookings",
+    "files2booking",
+]
