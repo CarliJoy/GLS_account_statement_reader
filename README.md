@@ -16,7 +16,7 @@ I tested it with the following Banking records so far:
 * Triodos 2020
 
 # Dependencies
-* `python >=3.6 `
+* `python >= 3.6`
 * `pdftotext`(part of [poppler-utils](https://poppler.freedesktop.org/))
 * `jupyter-notebook` [Optional]
 
@@ -66,11 +66,11 @@ See `example.ipynb` for an idea how to use it.
 # Data Protection Note
 As bank statement data is highly sensitive, only very general rules for categorizing were pushed to this git.
 
-Use `statement_reader/bookings/personal.py` for customizations of categories and payees.
+Use `src/bank_statement_reader/bookings/personal.py` for customizations of categories and payees.
 You only to create this file with a content like the following, and it will be used automatically.
 
 ```python
-from .booking_base import BookingBase
+from bank_statement_reader.booking.booking_base import BookingBase
 
 class Booking(BookingBase):
     def _set_payee(self, value: str):
