@@ -140,7 +140,7 @@ def data2booking(data: List[str], year: str) -> Bookings:
                     # that are so different and so hard to parse, could they
                     # not simply allow all time CSV downloads???
                     logger.info(
-                        f"Ignoring line {line} as it seems to be only a summary"
+                        f"Ignoring line '{line}' as it seems to be only a summary"
                     )
                     continue
                 else:
