@@ -21,11 +21,27 @@ I tested it with the following Banking records so far:
 * `jupyter-notebook` [Optional]
 
 
-# Usage
+# Installation
+
+
+## Variant One
+ Install using `pip install bank-statement-reader`
+
+Advantage:
+ * Easy to install
+
+Disadvantage:
+ * some features like the `booking/personal.py` file depend on modifying the package
+   the package source before installing, which won't work using this
+   method
+
+## Variant Two
 Clone the repro locally, create and activate a new virtual environment
 and run `pip install -e .` within the project folder.
 
-Now you have a new command `statement2csv` available.
+# Usage
+
+After installation, you have a new command `statement2csv` available.
 ```
 usage: statement2csv [-h] [--out out.csv] statement.pdf [statement.pdf ...]
 
