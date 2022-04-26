@@ -40,7 +40,7 @@ class Bookings(list):
         return result + "]"
 
     def __iter__(self):
-        """ Always sort"""
+        """Always sort"""
         for itm in sorted(super().__iter__()):
             yield itm
 
@@ -54,7 +54,7 @@ class Bookings(list):
         return result
 
     def __iadd__(self, other):
-        """ allow same handling for += like for add"""
+        """allow same handling for += like for add"""
         return self.__add__(other)
 
     @property

@@ -1,5 +1,6 @@
-from IPython.core.display import display
 import os
+
+from IPython.core.display import display
 from statement_reader import csv2bookings, pdf2bookings, txt2bookings
 
 bookings = None
