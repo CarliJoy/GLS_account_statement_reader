@@ -137,7 +137,6 @@ class BookingBase:
             return self._payee
 
     def _set_payee(self, value: str):
-
         beginnings = [
             "TAZ",
             "POCO",
