@@ -59,11 +59,11 @@ class Bookings(list):
 
     @property
     def start_date(self):
-        return list(sorted(self.daterelation.keys()))[0]
+        return list(sorted(k for k in self.daterelation.keys() if k is not None))[0]
 
     @property
     def end_date(self):
-        return list(sorted(self.daterelation.keys()))[-1]
+        return list(sorted(k for k in self.daterelation.keys() if k is not None))[-1]
 
     @property
     def sum(self):
@@ -111,6 +111,8 @@ class Bookings(list):
             fp.write("Date;Category;Type;Amount;Payee;Comment\n")
             for i in self:
                 i: Booking
+                if i.date is None:
+                    continue
                 if i.date > end_date:
                     break
                 if i.date >= start_date:
