@@ -281,14 +281,19 @@ class BookingBase:
     def __lt__(self, other: "BookingBase"):
         if not isinstance(other, BookingBase):
             raise ValueError("Can only compare BookingBase to other BookingBase object")
-        if self.date == other.date:
-            if self.payee == other.payee:
-                # everything is equal, lets compare comment
-                return humansorted([self.comment, other.comment])[0] == self.comment
-            else:
-                return humansorted([self.payee, other.payee])[0] == self.comment
-        else:
+        # Treat None dates as less than any real date
+        if self.date is None and other.date is None:
+            pass  # fall through to payee/comment comparison
+        elif self.date is None:
+            return True
+        elif other.date is None:
+            return False
+        elif self.date != other.date:
             return self.date < other.date
+        if self.payee == other.payee:
+            return humansorted([self.comment, other.comment])[0] == self.comment
+        else:
+            return humansorted([self.payee, other.payee])[0] == self.payee
 
     @property
     def _tr_(self):
